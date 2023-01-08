@@ -1,0 +1,54 @@
+name: main
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3  
+    - name: Set up Node.js 
+      uses: actions/setup-node@v3.5.1
+      with:
+        node-version: 18.x
+    - name: npm set
+      run: |
+        npm install
+        npm run build 
+    - name: login docker serve
+      uses: docker/login-action@v2.1.0
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3.2.0
+      with:
+        context: .
+        push: true
+        tags: ${{secrets.DOCKERHUB_USERNAME}}/serve:latest
+    - name: ssh pipelines
+      uses: cross-the-world/ssh-pipeline@master
+      with:
+        host: ${{ secrets.TCS_HOST }}
+        user: ${{ secrets.TCS_USER }}
+        pass: ${{ secrets.TCS_PASS }}
+        port: ${{ secrets.TCS_PORT }}
+        connect_timeout: 10s
+        script: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/serve:latest
+          docker stop serve
+          docker rm serve
+          docker run -dp 3000:3000 --name serve ${{ secrets.DOCKERHUB_USERNAME }}/serve:latest
+          
+      
+      
+      
+      
+      
+      
+      
